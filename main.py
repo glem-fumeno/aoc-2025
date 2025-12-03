@@ -5,6 +5,7 @@ from pathlib import Path
 puzzles = [
     "01",
     "02",
+    "03",
 ]
 
 
