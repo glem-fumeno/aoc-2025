@@ -4,10 +4,12 @@ from typing import Any
 from time import perf_counter
 
 from aoc_2025.day_01 import solve_01_part_1, solve_01_part_2
+from aoc_2025.day_02 import solve_02_part_1, solve_02_part_2
 
 type Solution = Callable[[str], Any]
 solutions_by_name: dict[str, tuple[Solution, Solution]] = {
-    "01": (solve_01_part_1, solve_01_part_2)
+    "01": (solve_01_part_1, solve_01_part_2),
+    "02": (solve_02_part_1, solve_02_part_2)
 }
 
 
