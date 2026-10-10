@@ -9,6 +9,7 @@ from aoc_2025.day_02 import solve_02_part_1, solve_02_part_2
 from aoc_2025.day_03 import solve_03_part_1, solve_03_part_2
 from aoc_2025.day_04 import solve_04_part_1, solve_04_part_2
 from aoc_2025.day_05 import solve_05_part_1, solve_05_part_2
+from aoc_2025.day_06 import solve_06_part_1, solve_06_part_2
 
 type Solution = Callable[[str], Any]
 solutions_by_name: dict[str, tuple[Solution, Solution]] = {
@@ -17,12 +18,13 @@ solutions_by_name: dict[str, tuple[Solution, Solution]] = {
     "03": (solve_03_part_1, solve_03_part_2),
     "04": (solve_04_part_1, solve_04_part_2),
     "05": (solve_05_part_1, solve_05_part_2),
+    "06": (solve_06_part_1, solve_06_part_2),
 }
 
 
 def solve(name: str):
     solve_part_1, solve_part_2 = solutions_by_name[name]
-    file = Path("./inputs").joinpath(name + ".txt").read_text().strip()
+    file = Path("./inputs").joinpath(name + ".txt").read_text().removesuffix("\n")
     start = perf_counter()
     solution_1 = solve_part_1(file)
     mid = perf_counter()
