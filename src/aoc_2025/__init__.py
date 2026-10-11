@@ -11,6 +11,7 @@ from aoc_2025.day_04 import solve_04_part_1, solve_04_part_2
 from aoc_2025.day_05 import solve_05_part_1, solve_05_part_2
 from aoc_2025.day_06 import solve_06_part_1, solve_06_part_2
 from aoc_2025.day_07 import solve_07_part_1, solve_07_part_2
+from aoc_2025.day_08 import solve_08_part_1, solve_08_part_2
 
 type Solution = Callable[[str], Any]
 solutions_by_name: dict[str, tuple[Solution, Solution]] = {
@@ -21,6 +22,7 @@ solutions_by_name: dict[str, tuple[Solution, Solution]] = {
     "05": (solve_05_part_1, solve_05_part_2),
     "06": (solve_06_part_1, solve_06_part_2),
     "07": (solve_07_part_1, solve_07_part_2),
+    "08": (solve_08_part_1, solve_08_part_2),
 }
 
 
