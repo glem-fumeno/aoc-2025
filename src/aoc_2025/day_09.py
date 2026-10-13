@@ -1,60 +1,39 @@
+from abc import ABC, abstractmethod
 from collections.abc import Iterable
 
-
-def between(le: int, v: int, ge: int) -> bool:
-    return le <= v <= ge or ge <= v <= le
+type Position = tuple[int, ...]
 
 
-class Position:
-    x: int
-    y: int
-
-    def __init__(self, x: int, y: int) -> None:
-        self.x = x
-        self.y = y
-
-    def __hash__(self) -> int:
-        return hash((self.x, self.y))
-
-    def with_x(self, x: int) -> Position:
-        return Position(x, self.y)
-
-    def with_y(self, y: int) -> Position:
-        return Position(self.x, y)
-
-    def area_to(self, other: Position) -> int:
-        dx, dy = abs(other.x - self.x) + 1, abs(other.y - self.y) + 1
-        return abs(dx * dy)
-
-    def rectangle_to(self, other: Position) -> list[Edge]:
-        return [
-            Edge(self, self.with_x(other.x)),
-            Edge(self.with_x(other.x), other),
-            Edge(other, self.with_y(other.y)),
-            Edge(self.with_y(other.y), self),
-        ]
-
-    def __eq__(self, value: object, /) -> bool:
-        return isinstance(value, Position) and (self.x, self.y) == (value.x, value.y)
-
-    def __repr__(self) -> str:
-        return f"{self.x}x{self.y}y"
+def area_to(p1: Position, p2: Position) -> int:
+    dx, dy = abs(p1[0] - p2[0]) + 1, abs(p1[1] - p2[1]) + 1
+    return abs(dx * dy)
 
 
-class Edge:
+def edge_to(p1: Position, p2: Position) -> Edge:
+    if p1[0] == p2[0]:
+        return VerticalEdge(p1, p2)
+    return HorizontalEdge(p1, p2)
+
+
+def rectangle_to(p1: Position, p2: Position) -> list[Edge]:
+    x1, y1 = p1
+    x2, y2 = p2
+    return [
+        HorizontalEdge((x1, y1), (x2, y1)),
+        HorizontalEdge((x1, y2), (x2, y2)),
+        VerticalEdge((x1, y1), (x1, y2)),
+        VerticalEdge((x2, y1), (x2, y2)),
+    ]
+
+
+class _Edge(ABC):
+    __slots__ = "p1", "p2", "x", "y"
     p1: Position
     p2: Position
-    x: int | None = None
-    y: int | None = None
 
     def __init__(self, p1: Position, p2: Position) -> None:
-        assert p1.x == p2.x or p1.y == p2.y, "Invalid edge"
         self.p1 = p1
         self.p2 = p2
-        if self.p1.x == self.p2.x:
-            self.x, self.y = p1.x, None
-        if self.p1.y == self.p2.y:
-            self.x, self.y = None, p1.y
 
     @property
     def vertices(self) -> tuple[Position, ...]:
@@ -63,83 +42,114 @@ class Edge:
     def other(self, p: Position) -> Position:
         return self.p1 if p == self.p2 else self.p2
 
+    @abstractmethod
+    def on_edge(self, p: Position) -> bool: ...
+
+    @abstractmethod
+    def iterate(self, xs: set[int], ys: set[int]) -> Iterable[Position]: ...
+
+
+class VerticalEdge(_Edge):
+    x: int
+
+    def __init__(self, p1: Position, p2: Position) -> None:
+        if p1[1] > p2[1]:
+            p1, p2 = p2, p1
+        super().__init__(p1, p2)
+        assert p1[0] == p2[0]
+        self.x = p1[0]
+
     def on_edge(self, p: Position) -> bool:
-        return self.on_vertical_edge(p) or self.on_horizontal_edge(p)
-
-    def on_vertical_edge(self, p: Position) -> bool:
-        return p.x == self.x and between(self.p1.y, p.y, self.p2.y)
-
-    def on_horizontal_edge(self, p: Position) -> bool:
-        return p.y == self.y and between(self.p1.x, p.x, self.p2.x)
+        return p[0] == self.x and self.p1[1] <= p[1] <= self.p2[1]
 
     def iterate(self, xs: set[int], ys: set[int]) -> Iterable[Position]:
-        if self.x is not None:
-            for y in ys:
-                if between(self.p1.y, y, self.p2.y):
-                    yield Position(self.x, y)
-        if self.y is not None:
-            for x in xs:
-                if between(self.p1.x, x, self.p2.x):
-                    yield Position(x, self.y)
+        del xs
+        return ((self.x, y) for y in ys if self.p1[1] <= y <= self.p2[1])
+
+
+class HorizontalEdge(_Edge):
+    y: int
+
+    def __init__(self, p1: Position, p2: Position) -> None:
+        if p1[0] > p2[0]:
+            p1, p2 = p2, p1
+        super().__init__(p1, p2)
+        assert p1[1] == p2[1]
+        self.y = p1[1]
+
+    def on_edge(self, p: Position) -> bool:
+        return p[1] == self.y and self.p1[0] <= p[0] <= self.p2[0]
+
+    def iterate(self, xs: set[int], ys: set[int]) -> Iterable[Position]:
+        del ys
+        return ((x, self.y) for x in xs if self.p1[0] <= x <= self.p2[0])
+
+
+type Edge = VerticalEdge | HorizontalEdge
 
 
 def solve_09_part_1(file: str) -> int:
-    positions = [Position(*map(int, line.split(","))) for line in file.splitlines()]
-    return max(p1.area_to(p2) for p1 in positions for p2 in positions)
+    positions = [tuple(map(int, line.split(","))) for line in file.splitlines()]
+    return max(area_to(p1, p2) for p1 in positions for p2 in positions)
 
 
 def is_inside(
     p: Position,
-    vertices: list[Position],
+    vertices: set[Position],
     edges: list[Edge],
+    vertical_edges: dict[int, VerticalEdge],
     cache: dict[Position, bool],
 ):
+    if p in vertices:
+        return True
     if p in cache:
         return cache[p]
-    if p in vertices:
-        cache[p] = True
-        return True
     if any(edge.on_edge(p) for edge in edges):
         cache[p] = True
         return True
-    positions = [Position(e.x, p.y) for e in edges if e.x is not None and e.x < p.x]
+    positions = ((e.x, p[1]) for e in vertical_edges.values() if e.x < p[0])
     inside = False
     last_direction: bool | None = None
     for pos in positions:
-        for edge in edges:
-            if not edge.on_vertical_edge(pos):
-                continue
-            if pos in edge.vertices and last_direction is None:
-                last_direction = edge.other(pos).y > pos.y
-            elif pos in edge.vertices:
-                if (edge.other(pos).y > pos.y) != last_direction:
-                    inside = not inside
-                last_direction = None
-            else:
+        edge = vertical_edges[pos[0]]
+        if not edge.on_edge(pos):
+            continue
+        if pos in edge.vertices and last_direction is None:
+            last_direction = edge.other(pos)[1] > pos[1]
+        elif pos in edge.vertices:
+            if (edge.other(pos)[1] > pos[1]) != last_direction:
                 inside = not inside
-            break
+            last_direction = None
+        else:
+            inside = not inside
     cache[p] = inside
     return inside
 
 
 def solve_09_part_2(file: str) -> int:
-    positions = [Position(*map(int, line.split(","))) for line in file.splitlines()]
+    positions = [tuple(map(int, line.split(","))) for line in file.splitlines()]
+    vertices = set(positions)
     edges = [
-        Edge(positions[i], positions[(i + 1) % len(positions)])
+        edge_to(positions[i], positions[(i + 1) % len(positions)])
         for i in range(len(positions))
     ]
-    cache: dict[Position, bool] = {}
-    xs = {p.x + i for p in positions for i in range(-1, 2)}
-    ys = {p.y + i for p in positions for i in range(-1, 2)}
+    xs, ys = {p[0] for p in positions}, {p[1] for p in positions}
+    vertical_edges = {e.x: e for e in edges if isinstance(e, VerticalEdge)}
     permutations = [
-        (p1, p2, print(f"{i * len(positions) + j} / {len(positions) * len(positions)}"))
-        for i, p1 in enumerate(positions)
-        for j, p2 in enumerate(positions)
+        (p1, p2, area_to(p1, p2))
+        for p1 in positions
+        for p2 in positions
         if hash(p1) < hash(p2)
-        and all(
-            is_inside(p, positions, edges, cache)
-            for edge in p1.rectangle_to(p2)
-            for p in edge.iterate(xs, ys)
-        )
     ]
-    return max(p1.area_to(p2) for p1, p2, _ in permutations)
+    current_max = 0
+    cache: dict[Position, bool] = {}
+    for p1, p2, a in permutations:
+        if a <= current_max:
+            continue
+        if all(
+            is_inside(p, vertices, edges, vertical_edges, cache)
+            for edge in rectangle_to(p1, p2)
+            for p in edge.iterate(xs, ys)
+        ):
+            current_max = a
+    return current_max
