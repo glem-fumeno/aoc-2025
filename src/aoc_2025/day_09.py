@@ -1,3 +1,6 @@
+from collections.abc import Iterable
+
+
 def between(le: int, v: int, ge: int) -> bool:
     return le <= v <= ge or ge <= v <= le
 
@@ -13,15 +16,29 @@ class Position:
     def __hash__(self) -> int:
         return hash((self.x, self.y))
 
+    def with_x(self, x: int) -> Position:
+        return Position(x, self.y)
+
+    def with_y(self, y: int) -> Position:
+        return Position(self.x, y)
+
     def area_to(self, other: Position) -> int:
         dx, dy = abs(other.x - self.x) + 1, abs(other.y - self.y) + 1
         return abs(dx * dy)
 
-    def __eq__(self, value: Position, /) -> bool:  # pyright: ignore[reportIncompatibleMethodOverride]
-        return (self.x, self.y) == (value.x, value.y)
+    def rectangle_to(self, other: Position) -> list[Edge]:
+        return [
+            Edge(self, self.with_x(other.x)),
+            Edge(self.with_x(other.x), other),
+            Edge(other, self.with_y(other.y)),
+            Edge(self.with_y(other.y), self),
+        ]
+
+    def __eq__(self, value: object, /) -> bool:
+        return isinstance(value, Position) and (self.x, self.y) == (value.x, value.y)
 
     def __repr__(self) -> str:
-        return f"{self.x}x{self.y}y)"
+        return f"{self.x}x{self.y}y"
 
 
 class Edge:
@@ -55,16 +72,35 @@ class Edge:
     def on_horizontal_edge(self, p: Position) -> bool:
         return p.y == self.y and between(self.p1.x, p.x, self.p2.x)
 
+    def iterate(self, xs: set[int], ys: set[int]) -> Iterable[Position]:
+        if self.x is not None:
+            for y in ys:
+                if between(self.p1.y, y, self.p2.y):
+                    yield Position(self.x, y)
+        if self.y is not None:
+            for x in xs:
+                if between(self.p1.x, x, self.p2.x):
+                    yield Position(x, self.y)
+
 
 def solve_09_part_1(file: str) -> int:
     positions = [Position(*map(int, line.split(","))) for line in file.splitlines()]
     return max(p1.area_to(p2) for p1 in positions for p2 in positions)
 
 
-def is_inside(p: Position, vertices: list[Position], edges: list[Edge]):
+def is_inside(
+    p: Position,
+    vertices: list[Position],
+    edges: list[Edge],
+    cache: dict[Position, bool],
+):
+    if p in cache:
+        return cache[p]
     if p in vertices:
+        cache[p] = True
         return True
     if any(edge.on_edge(p) for edge in edges):
+        cache[p] = True
         return True
     positions = [Position(e.x, p.y) for e in edges if e.x is not None and e.x < p.x]
     inside = False
@@ -82,6 +118,7 @@ def is_inside(p: Position, vertices: list[Position], edges: list[Edge]):
             else:
                 inside = not inside
             break
+    cache[p] = inside
     return inside
 
 
@@ -91,25 +128,18 @@ def solve_09_part_2(file: str) -> int:
         Edge(positions[i], positions[(i + 1) % len(positions)])
         for i in range(len(positions))
     ]
-    max_x = max(p.x for p in positions)
-    max_y = max(p.y for p in positions)
-    for i in range(max_y + 2):
-        for j in range(max_x + 2):
-            p = Position(j, i)
-            if p in positions:
-                print("x", end="")
-                continue
-            for edge in edges:
-                if edge.on_vertical_edge(p):
-                    print("|", end="")
-                    break
-                if edge.on_horizontal_edge(p):
-                    print("-", end="")
-                    break
-            else:
-                if is_inside(p, positions, edges):
-                    print("o", end="")
-                else:
-                    print(".", end="")
-        print()
-    return 0
+    cache: dict[Position, bool] = {}
+    xs = {p.x + i for p in positions for i in range(-1, 2)}
+    ys = {p.y + i for p in positions for i in range(-1, 2)}
+    permutations = [
+        (p1, p2, print(f"{i * len(positions) + j} / {len(positions) * len(positions)}"))
+        for i, p1 in enumerate(positions)
+        for j, p2 in enumerate(positions)
+        if hash(p1) < hash(p2)
+        and all(
+            is_inside(p, positions, edges, cache)
+            for edge in p1.rectangle_to(p2)
+            for p in edge.iterate(xs, ys)
+        )
+    ]
+    return max(p1.area_to(p2) for p1, p2, _ in permutations)
