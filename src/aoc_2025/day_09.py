@@ -39,6 +39,13 @@ class Edge:
         if self.p1.y == self.p2.y:
             self.x, self.y = None, p1.y
 
+    @property
+    def vertices(self) -> tuple[Position, ...]:
+        return self.p1, self.p2
+
+    def other(self, p: Position) -> Position:
+        return self.p1 if p == self.p2 else self.p2
+
     def on_edge(self, p: Position) -> bool:
         return self.on_vertical_edge(p) or self.on_horizontal_edge(p)
 
@@ -52,6 +59,30 @@ class Edge:
 def solve_09_part_1(file: str) -> int:
     positions = [Position(*map(int, line.split(","))) for line in file.splitlines()]
     return max(p1.area_to(p2) for p1 in positions for p2 in positions)
+
+
+def is_inside(p: Position, vertices: list[Position], edges: list[Edge]):
+    if p in vertices:
+        return True
+    if any(edge.on_edge(p) for edge in edges):
+        return True
+    positions = [Position(e.x, p.y) for e in edges if e.x is not None and e.x < p.x]
+    inside = False
+    last_direction: bool | None = None
+    for pos in positions:
+        for edge in edges:
+            if not edge.on_vertical_edge(pos):
+                continue
+            if pos in edge.vertices and last_direction is None:
+                last_direction = edge.other(pos).y > pos.y
+            elif pos in edge.vertices:
+                if (edge.other(pos).y > pos.y) != last_direction:
+                    inside = not inside
+                last_direction = None
+            else:
+                inside = not inside
+            break
+    return inside
 
 
 def solve_09_part_2(file: str) -> int:
@@ -76,6 +107,9 @@ def solve_09_part_2(file: str) -> int:
                     print("-", end="")
                     break
             else:
-                print(".", end="")
+                if is_inside(p, positions, edges):
+                    print("o", end="")
+                else:
+                    print(".", end="")
         print()
     return 0
