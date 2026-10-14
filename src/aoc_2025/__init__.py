@@ -12,6 +12,7 @@ from aoc_2025.day_06 import Solution06
 from aoc_2025.day_07 import Solution07
 from aoc_2025.day_08 import Solution08
 from aoc_2025.day_09 import Solution09
+from aoc_2025.day_10 import Solution10
 
 
 class Solution(Protocol):
@@ -30,6 +31,7 @@ solution_by_name: dict[str, type[Solution]] = {
     "07": Solution07,
     "08": Solution08,
     "09": Solution09,
+    "10": Solution10,
 }
 
 
