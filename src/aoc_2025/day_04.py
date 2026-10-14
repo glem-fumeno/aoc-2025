@@ -4,16 +4,22 @@ from typing import Literal
 type RollState = Literal[".", "@"]
 
 
-class RollGrid:
-    grid: list[list[bool]]
-    width: int
-    height: int
-
+class Solution04:
     def __init__(self, file: str) -> None:
         lines = file.splitlines()
         self.grid = [[c == "@" for c in line] for line in lines]
         self.height = len(lines)
         self.width = len(lines[0])
+
+    def solve_part_1(self) -> int:
+        return len(list(self.get_accessible()))
+
+    def solve_part_2(self) -> int:
+        total = 0
+        while len(to_remove := [(r, c) for r, c in self.get_accessible()]) > 0:
+            total += len(to_remove)
+            self.remove_many(to_remove)
+        return total
 
     def at_pos(self, r: int, c: int) -> bool:
         return (
@@ -46,16 +52,3 @@ class RollGrid:
             for c, _ in enumerate(row):
                 if self.is_accessible(r, c):
                     yield r, c
-
-
-def solve_04_part_1(file: str) -> int:
-    return len(list(RollGrid(file).get_accessible()))
-
-
-def solve_04_part_2(file: str) -> int:
-    grid = RollGrid(file)
-    total = 0
-    while len(to_remove := [(r, c) for r, c in grid.get_accessible()]) > 0:
-        total += len(to_remove)
-        grid.remove_many(to_remove)
-    return total

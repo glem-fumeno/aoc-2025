@@ -8,9 +8,12 @@ def max_substr(digits: str, depth: int) -> str:
     return max_digit + max_substr(digits[max_i + 1 :], depth - 1)
 
 
-def solve_03_part_1(file: str) -> int:
-    return sum(int(max_substr(line, 2)) for line in file.splitlines())
+class Solution03:
+    def __init__(self, file: str) -> None:
+        self.banks = file.splitlines()
 
+    def solve_part_1(self) -> int:
+        return sum(int(max_substr(line, 2)) for line in self.banks)
 
-def solve_03_part_2(file: str) -> int:
-    return sum(int(max_substr(line, 12)) for line in file.splitlines())
+    def solve_part_2(self) -> int:
+        return sum(int(max_substr(line, 12)) for line in self.banks)
