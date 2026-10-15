@@ -19,10 +19,14 @@ def switch_button(lights: str, button: tuple[int, ...]) -> str:
     )
 
 
-def increase_button(
-    joltages: tuple[int, ...], button: tuple[int, ...]
+def amounted_joltage(
+    amounts: tuple[int, ...], buttons: list[tuple[int, ...]], length: int
 ) -> tuple[int, ...]:
-    return tuple(j + 1 if i in button else j for i, j in enumerate(joltages))
+    lights = [0] * length
+    for amount, button in zip(amounts, buttons):
+        for light in button:
+            lights[light] += amount
+    return tuple(lights)
 
 
 @dataclass
@@ -30,6 +34,10 @@ class Indicators:
     lights: str
     buttons: list[tuple[int, ...]]
     joltages: tuple[int, ...]
+
+    @property
+    def size(self) -> int:
+        return len(self.joltages)
 
     @classmethod
     def from_line(cls, line: str) -> Self:
@@ -57,21 +65,9 @@ class Indicators:
         assert False, "unreachable!"
 
     def joltage_target_depth(self) -> int:
-        swapped_indices = [(tuple([0] * len(self.joltages)), 0)]
-        seen = {tuple([0] * len(self.joltages))}
-        for joltages, depth in swapped_indices:
-            if all(joltage == self.joltages[i] for i, joltage in enumerate(joltages)):
-                return depth
-            for button in self.buttons:
-                new_joltages = increase_button(joltages, button)
-                if new_joltages in seen:
-                    continue
-                if any(
-                    joltage > self.joltages[i] for i, joltage in enumerate(new_joltages)
-                ):
-                    continue
-                seen.add(new_joltages)
-                swapped_indices.append((new_joltages, depth + 1))
+        depths: list[tuple[tuple[int, ...], int]] = [(tuple([0] * self.size), 0)]
+        for amounts, depth in depths:
+            amounted = amounted_joltage(amounts, self.buttons, self.size)
         assert False, "unreachable!"
 
 
@@ -83,8 +79,7 @@ class Solution10:
         return sum(indicator.lights_out_depth() for indicator in self.indicators)
 
     def solve_part_2(self) -> int:
-        return sum(
-            indicator.joltage_target_depth()
-            for i, indicator in enumerate(self.indicators)
-            if print(i) is None
-        )
+        indicators = self.indicators[0]
+        print(amounted_joltage([1, 3, 0, 3, 1, 2], indicators.buttons, 4))
+        print(indicators)
+        return 0
